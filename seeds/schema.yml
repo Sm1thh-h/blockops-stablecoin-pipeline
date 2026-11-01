@@ -1,0 +1,329 @@
+version: 2
+
+seeds:
+
+  # ---------------------------------------------------------------------------
+  - name: entity_registry
+    description: >
+      One row per entity in the project. The only permitted source of ownership and
+      geography claims: a wallet maps to an entity, and the entity maps to a country here.
+      Rows stay verified = false until checked against a primary source (company site,
+      licence or regulator listing).
+    config:
+      column_types:
+        has_stablecoin_histogram_data: boolean
+        arkham_last_active_day: date
+        verified: boolean
+    data_tests:
+      # The histogram flag and the chain list must agree.
+      - dbt_utils.expression_is_true:
+          arguments:
+            expression: "has_stablecoin_histogram_data = (labelled_chains != 'none')"
+      # operating_regions should be a semicolon-separated list of countries. This warns, not fails.
+      - dbt_utils.expression_is_true:
+          arguments:
+            expression: "operating_regions not like '%/%' and operating_regions not in ('Africa', 'TO_VERIFY')"
+          config:
+            severity: warn
+    columns:
+      - name: entity_slug
+        description: Arkham entity slug. Joins to every staging model and to the other seeds.
+        data_tests: [unique, not_null]
+      - name: entity_name
+        data_tests: [not_null]
+      - name: value_chain_layer
+        description: >
+          PRIMARY business role only, not Arkham's type (Arkham calls all five 'cex').
+          Every layer an entity operates in is listed in entity_layers.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['Exchange', 'Payments', 'Stablecoin Issuer']
+      - name: other_layers
+        description: >
+          Free-text list of secondary products, semicolon-separated. Descriptive only.
+          Analysis uses entity_layers, not this column. Some values here have no source yet
+          (for example 'Savings and yield' for Quidax and Yellow Card).
+      - name: headquarters
+        description: Where the company runs its head office in practice.
+      - name: operating_regions
+        description: >
+          Countries where the entity serves customers, semicolon-separated, using the project's
+          country names. Must be sourced. 'Africa' or a slash-separated region list is too coarse
+          to join to a country and triggers a warning.
+      - name: ownership_classification
+        description: >
+          Origin of the controlling owners and founders (for example African-owned), not the
+          country of legal registration. Legal registration is headquarters_on_paper.
+        data_tests: [not_null]
+      - name: arkham_type
+        description: Arkham's own label. Do not use it for analysis; use value_chain_layer.
+      - name: has_stablecoin_histogram_data
+        description: >
+          True when the 30-day USDT/USDC histogram (2026-09-19 to 2026-10-18) returned data.
+          False means no stablecoin transfers were visible, not that Arkham knows nothing.
+        data_tests: [not_null]
+      - name: labelled_chains
+        description: >
+          Chains with stablecoin histogram data for this entity, semicolon-separated, or 'none'.
+          Describes Arkham coverage only, not where the entity operates.
+        data_tests: [not_null]
+      - name: arkham_last_active_day
+        description: >
+          Last day with non-zero activity in the all-token, all-chain flow endpoint. The flow data
+          was pulled on 2026-10-04, so 2026-10-03 is the pull limit, not necessarily the last
+          real activity. Earlier dates suggest stale Arkham labels.
+        data_tests: [not_null]
+      - name: source_note
+      - name: verified
+        data_tests: [not_null]
+      - name: primary_operating_country
+        description: Single country used when an entity's flow has to be assigned to one market. An assumption, not a measurement.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['South Africa', 'Nigeria', 'Kenya', 'Ghana', 'Uganda', 'Tanzania', 'Egypt']
+      - name: headquarters_on_paper
+        description: Legal domicile of the registered company. Can differ from where the business operates.
+
+  # ---------------------------------------------------------------------------
+  - name: entity_layers
+    description: >
+      One row per entity and value-chain layer it operates in. Exactly one row per entity is
+      primary and must match entity_registry.value_chain_layer (enforced by the singular test
+      assert_one_primary_layer_per_entity). Use it to attribute revenue streams. It does not
+      split an entity's on-chain volume between layers, because the blockchain data cannot show
+      which layer a transfer belongs to. Never sum volume across layers: an entity's volume
+      counts once.
+    config:
+      column_types:
+        is_primary: boolean
+        verified: boolean
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [entity_slug, value_chain_layer]
+    columns:
+      - name: entity_slug
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('entity_registry')
+                field: entity_slug
+      - name: value_chain_layer
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['Exchange', 'Payments', 'Stablecoin Issuer', 'Other financial services']
+      - name: is_primary
+        data_tests: [not_null]
+      - name: evidence_source
+        description: URL or note supporting the row. Set verified = true only after checking it.
+        data_tests: [not_null]
+      - name: verified
+        data_tests: [not_null]
+      - name: notes
+
+  # ---------------------------------------------------------------------------
+  - name: revenue_assumptions
+    description: >
+      Stablecoin-only fee assumptions per entity, from published pricing. One row per entity,
+      country and fee type. rate_value is the headline or base-tier figure and is NOT a central
+      estimate: use rate_low and rate_high for the low and high revenue cases. A blank figure
+      means unknown, never zero. date_retrieved is the day the figure was seen, not the day
+      it was published. Percent fees need a value base; flat fees need an event count.
+    config:
+      column_types:
+        rate_value: float64
+        rate_low: float64
+        rate_high: float64
+        rate_currency: string
+        date_retrieved: date
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [entity_slug, country, fee_type, chain, stablecoin]
+      - dbt_utils.expression_is_true:
+          arguments:
+            expression: "status != 'FILLED' or rate_value is not null"
+      - dbt_utils.expression_is_true:
+          arguments:
+            expression: "status != 'TO_FILL' or (rate_value is null and rate_low is null and rate_high is null)"
+      - dbt_utils.expression_is_true:
+          arguments:
+            expression: "rate_low is null or rate_high is null or rate_low <= rate_high"
+      - dbt_utils.expression_is_true:
+          arguments:
+            expression: "rate_value is null or ((rate_low is null or rate_value >= rate_low) and (rate_high is null or rate_value <= rate_high))"
+      - dbt_utils.expression_is_true:
+          arguments:
+            expression: "rate_basis != 'percent_of_value' or rate_currency is null"
+      - dbt_utils.expression_is_true:
+          arguments:
+            expression: "rate_basis != 'flat_per_event' or rate_currency is not null"
+      # Chain and stablecoin only make sense on withdrawal fees.
+      - dbt_utils.expression_is_true:
+          arguments:
+            expression: "fee_type = 'stablecoin_withdrawal_fee' or (chain is null and stablecoin is null)"
+    columns:
+      - name: entity_slug
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('entity_registry')
+                field: entity_slug
+      - name: country
+        description: >
+          Market the fee applies to, or Global when the source is not country-specific.
+          It is a label, not a split: the blockchain data carries no country.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['South Africa', 'Nigeria', 'Kenya', 'Ghana', 'Uganda', 'Tanzania', 'Egypt', 'Global']
+      - name: fee_type
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - trading_fee_maker
+                  - trading_fee_taker
+                  - trading_fee_taker_stable_to_stable
+                  - stablecoin_withdrawal_fee
+                  - payin_fee
+                  - payout_fee
+      - name: chain
+        description: >
+          Chain a withdrawal fee applies to, using the Arkham chain names in the flow tables
+          (ethereum, tron, solana, base, bsc, arbitrum_one, avalanche, polygon). Blank means the
+          fee is not chain-specific. Only used on stablecoin_withdrawal_fee rows.
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['ethereum', 'tron', 'solana', 'base', 'bsc', 'arbitrum_one', 'avalanche', 'polygon']
+      - name: stablecoin
+        description: Token a withdrawal fee applies to. Blank means all stablecoins. Only used on stablecoin_withdrawal_fee rows.
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['USDT', 'USDC']
+      - name: applies_to
+        description: The product or pair the fee covers.
+        data_tests: [not_null]
+      - name: rate_value
+        description: Headline or base-tier figure. Usually equals rate_high. Negative means a rebate paid to the maker.
+      - name: rate_low
+        description: Low end of the plausible range. Blank means unknown.
+      - name: rate_high
+        description: High end of the plausible range. Blank means unknown.
+      - name: rate_basis
+        description: >
+          percent_of_value = percent of the traded, converted or paid value.
+          flat_per_event = a fixed amount per withdrawal or payout (see rate_currency).
+          not_published = the fee is dynamic or unpublished, so no figure exists.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['percent_of_value', 'flat_per_event', 'not_published']
+      - name: rate_currency
+        description: >
+          Currency of a flat fee. USD_stablecoin means units of USDT or USDC, treated as about
+          1 USD each. Blank for percent fees. NGN and KES fees need an exchange rate to USD.
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['USD_stablecoin', 'NGN', 'KES']
+      - name: source_url
+        data_tests: [not_null]
+      - name: date_retrieved
+        data_tests: [not_null]
+      - name: confidence
+        description: >
+          High = official page, figure seen directly. Medium = official but partial or dated, or
+          several secondary sources agree. Low = single secondary source, conflicting sources, or undated.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['High', 'Medium', 'Low']
+      - name: status
+        description: >
+          FILLED = rate_value present with a source. PARTIAL = only a range or a partial figure.
+          TO_FILL = nothing reliable found.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['FILLED', 'PARTIAL', 'TO_FILL']
+      - name: notes
+
+  # ---------------------------------------------------------------------------
+  - name: stablecoin_registry
+    description: >
+      One row per Arkham token id that the project treats as a stablecoin or stablecoin
+      position. The balances model joins to this table, so a token missing here is dropped
+      silently (analyses/unmapped_stablecoin_like_tokens.sql lists any that are missing).
+      It makes no claim about geography. issuer, issuer_origin and category stay unverified
+      until verified = true.
+    config:
+      column_types:
+        include_in_stablecoin_total: boolean
+        verified: boolean
+    data_tests:
+      # Receipt tokens must never be counted in the stablecoin total.
+      - dbt_utils.expression_is_true:
+          arguments:
+            expression: "reporting_group != 'YIELD_WRAPPER' or include_in_stablecoin_total = false"
+    columns:
+      - name: arkham_token_id
+        description: Arkham's token id, not the symbol. A fake token can copy a symbol but not an id.
+        data_tests: [unique, not_null]
+      - name: symbol
+        data_tests: [not_null]
+      - name: issuer
+        data_tests: [not_null]
+      - name: issuer_origin
+        description: Foreign, African, TO_VERIFY, or n/a. Feeds the foreign versus African issuer comparison.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['Foreign', 'African', 'TO_VERIFY', 'n/a']
+      - name: peg_currency
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['USD', 'ZAR', 'NGN', 'KES', 'GHS', 'EGP', 'UGX', 'TZS']
+      - name: category
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['fiat_backed', 'bridged', 'crypto_backed', 'yield_bearing_wrapper', 'TO_VERIFY']
+      - name: reporting_group
+        description: How the balance rolls up. Group by this column, or filter on include_in_stablecoin_total, before summing.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['USDT', 'USDC', 'OTHER_USD', 'YIELD_WRAPPER', 'LOCAL_CURRENCY']
+      - name: underlying_token_id
+        description: For bridged tokens and receipt tokens, the token they represent.
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('stablecoin_registry')
+                field: arkham_token_id
+      - name: include_in_stablecoin_total
+        data_tests: [not_null]
+      - name: source_note
+      - name: verified
+        data_tests: [not_null]
