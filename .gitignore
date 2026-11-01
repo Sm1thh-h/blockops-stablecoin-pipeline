@@ -1,0 +1,25 @@
+# dbt
+target/
+dbt_packages/
+logs/
+dbt_internal_packages/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+dbt-env/
+
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+
+# Google Cloud credentials
+*service-account*.json
+*credentials*.json
+
+# Mac
+.DS_Store

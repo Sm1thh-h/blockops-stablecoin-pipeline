@@ -1,0 +1,70 @@
+version: 2
+
+sources:
+  # Ethereum
+  - name: ethereum
+    description: "Public blockchain data for Ethereum"
+    database: bigquery-public-data
+    schema: crypto_ethereum
+    tables:
+      - name: token_transfers
+        description: "ERC-20 token transfer events"
+      - name: transactions
+        description: "Raw transaction data"
+      - name: logs
+        description: "Smart contract event logs"
+
+  # Polygon
+  - name: polygon
+    description: "Public blockchain data for Polygon"
+    database: bigquery-public-data
+    schema: crypto_polygon
+    tables:
+      - name: token_transfers
+        description: "ERC-20 token transfer events on Polygon"
+
+  # Tron
+  - name: tron
+    description: "Public blockchain data for Tron"
+    database: bigquery-public-data
+    schema: crypto_tron
+    tables:
+      - name: token_transfers
+        description: "TRC-20 token transfer events on Tron"
+
+  # Avalanche
+  - name: avalanche
+    description: "Public blockchain data for Avalanche"
+    database: bigquery-public-data
+    schema: crypto_avalanche
+    tables:
+      - name: token_transfers
+        description: "ERC-20 token transfer events on Avalanche"
+
+  # Optimism
+  - name: optimism
+    description: "Public blockchain data for Optimism"
+    database: bigquery-public-data
+    schema: crypto_optimism
+    tables:
+      - name: token_transfers
+        description: "ERC-20 token transfer events on Optimism"
+
+  # Arbitrum
+  - name: arbitrum
+    description: "Public blockchain data for Arbitrum"
+    database: bigquery-public-data
+    schema: crypto_arbitrum
+    tables:
+      - name: token_transfers
+        description: "ERC-20 token transfer events on Arbitrum"
+
+  # Arkham raw data
+  - name: raw_arkham
+    description: "this is the raw data using the arkham API"
+    database: blockops-stablecoin-africa
+    schema: raw_arkham
+    tables:
+      - name: entities_raw
+      - name: entity_endpoints_raw
+      - name: entity_transfers_raw

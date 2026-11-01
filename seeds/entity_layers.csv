@@ -1,0 +1,14 @@
+entity_slug,value_chain_layer,is_primary,evidence_source,verified,notes
+valr,Exchange,true,Project notes (unchecked),false,
+valr,Payments,false,https://support.valr.com/hc/en-us/articles/360019021931-Terms-of-Service; https://play.google.com/store/apps/details?id=com.valr.app&hl=en_ZA,false,"VALR Pay (send payments by mobile number, email or Pay ID). VALR terms describe it as a licensed third-party payment provider registered with PASA. Seen via search snippets, pages not opened in full"
+valr,Other financial services,false,https://support.valr.com/hc/en-us/articles/27641128307740-Earn-on-VALR; https://play.google.com/store/apps/details?id=com.valr.app&hl=en_ZA,false,"Earn (staking, on-chain earn through Aave, variable-rate lending) and tokenised US equities (xStocks). Not a layer the project analyses yet"
+luno,Exchange,true,Project notes (unchecked),false,
+luno,Payments,false,https://www.luno.com/en-za/pay; https://www.luno.com/en-za/,false,"Luno Pay (pay merchants in South Africa with crypto or ZAR) and Settlements (cross-border stablecoin collection and payout). Seen via search snippets, pages not opened in full"
+luno,Other financial services,false,https://www.luno.com/en-za/; https://guide.luno.com/hc/en-gb/articles/14158595648541-Luno-fees-and-limits-in-South-Africa,false,"Staking, USDC Earn, tokenised stocks, bundles and prediction markets. Not a layer the project analyses yet"
+quidax,Exchange,true,Project notes (unchecked),false,
+quidax,Payments,false,https://www.quidax.io/c/business/; https://www.quidax.io/c/stablecoin-api/; https://techcabal.com/2025/05/21/quidax-yellow-card-busha-bet-on-b2b-crypto-payments/,false,"Business API, Ramp (fiat to stablecoin and back), Collections and a payment gateway (Basqet), per Quidax pages seen via search snippets and a TechCabal article (about 17 months old). Pages not opened in full"
+busha,Exchange,true,https://busha.io,false,"Buy, sell, convert and trade digital assets with NGN and KES, per a secondary summary citing busha.io"
+busha,Payments,false,https://busha.io; https://busha.io/business,false,"Cards, bill payments, global send and receive, and a business API with treasury and cross-border settlement, per a secondary summary"
+busha,Other financial services,false,https://busha.io,false,"Savings and yield accounts, crypto-backed loans and tokenized assets, per a secondary summary. Not a layer the project analyses yet"
+yellow-card,Payments,true,Project notes (unchecked),false,Arkham labels it cex; the business is treated as payments
+yellow-card,Exchange,false,https://play.google.com/store/apps/details?id=io.yellowcard.app&hl=en_US,false,"Consumer buy and sell app. Listing seen via search, page not opened"
