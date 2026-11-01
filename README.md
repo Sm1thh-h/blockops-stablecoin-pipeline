@@ -1,15 +1,11 @@
-Welcome to your new dbt project!
+# blockops-stablecoin-pipeline
+ETL pipeline using dbt and BigQuery to analyse on-chain stablecoin flows, entity distribution, and revenue distribution across subharan Africa
 
-### Using the starter project
+# Project Overview
+A reproducible data pipeline to model stablecoin flows and value capture across Sub-Saharan Africa. Built for BlockOps Network.
 
-Try running the following commands:
-- dbt run
-- dbt test
-
-
-### Resources:
-- Learn more about dbt [in the docs](https://docs.getdbt.com/docs/introduction)
-- Check out [Discourse](https://discourse.getdbt.com/) for commonly asked questions and answers
-- Join the [chat](https://community.getdbt.com/) on Slack for live discussions and support
-- Find [dbt events](https://events.getdbt.com) near you
-- Check out [the blog](https://blog.getdbt.com/) for the latest news on dbt's development and best practices
+# Tech Stack
+- **dbt** – SQL transformations, testing, documentation
+- **BigQuery** – Data warehouse
+- **Dune / Allium / Artemis** – On-chain data sources
+- **GitHub** – Version control
