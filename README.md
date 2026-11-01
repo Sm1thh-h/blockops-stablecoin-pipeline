@@ -7,5 +7,5 @@ A reproducible data pipeline to model stablecoin flows and value capture across 
 # Tech Stack
 - **dbt** – SQL transformations, testing, documentation
 - **BigQuery** – Data warehouse
-- **Dune / Allium / Artemis** – On-chain data sources
+- **Dune / Allium / Arkham / Artemis** – On-chain data sources
 - **GitHub** – Version control
